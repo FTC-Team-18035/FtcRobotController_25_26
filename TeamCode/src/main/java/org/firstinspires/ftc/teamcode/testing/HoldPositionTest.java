@@ -1,21 +1,25 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.testing;
 
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+import com.arcrobotics.ftclib.hardware.motors.Motor;
+import com.pedropathing.localization.Encoder;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
-@Disabled
-public class DrivingTemplate extends LinearOpMode {
-
-
+@TeleOp (name = "Hold Position Test")
+public class HoldPositionTest extends LinearOpMode { // The name of the class (This has to match the file name)
     private double frontLeftPower = 0;     // declare motor power variable
     private double backLeftPower = 0;      // declare motor power variable
     private double frontRightPower = 0;    // declare motor power variable
     private double backRightPower = 0;     // declare motor power variable
     private double denominator = 1;        // declare motor power calculation variable
+    private int    precision = 2;          // chassis motor power reduction factor 1
 
-    private int precision = 2;                                  // chassis motor power reduction factor 1
+    private double HoldXPosition = 0;   // Saves the current X position
+    private double HoldYPosition = 0;   // Saves the current Y position
+
+    private boolean HoldPositionSet = false;
 
     @Override
     public void runOpMode() {
@@ -26,6 +30,7 @@ public class DrivingTemplate extends LinearOpMode {
         DcMotor FrontLeft = hardwareMap.dcMotor.get("Front Left");     // Chub Port 2 // Right Stick For Turning
         DcMotor BackLeft = hardwareMap.dcMotor.get("Back Left");       // Chub Port 3
 
+        // Dead wheel feedback port 1 (Back Right) and 2 (Front Right)
 
         //****************************** REVERSE MOTORS *****************************************************
 
@@ -41,19 +46,49 @@ public class DrivingTemplate extends LinearOpMode {
 
         waitForStart();
 
-
         while (opModeIsActive()) {
+
+
+
             //************************** DRIVE CONTROLS **************************************************
             // check for driving input
             double y = -gamepad1.left_stick_y;         // Remember, this is reversed!
-            double x = gamepad1.left_stick_x * 1.1; // Counteract imperfect strafing
-            double rx = gamepad1.right_stick_x;       // Measures turning
+            double x = gamepad1.left_stick_x * 1.1;    // Counteract imperfect strafing
+            double rx = gamepad1.right_stick_x;        // Measures turning
             if (gamepad1.right_trigger >= 0.75) {      // Checks if the Right Trigger was pressed and if so it continues the stuff in the brackets
-                y = gamepad1.left_stick_y;           // Remember, this is reversed!
-                x = -gamepad1.left_stick_x * 1.1;    // Counteract imperfect strafing
-                rx = gamepad1.right_stick_x;          // Measures turning
+                y = gamepad1.left_stick_y;             // Remember, this is reversed!
+                x = -gamepad1.left_stick_x * 1.1;      // Counteract imperfect strafing
+                rx = gamepad1.right_stick_x;           // Measures turning
             }
 
+            if (gamepad1.left_trigger > .25) {
+                double CurrentYPosition = FrontRight.getCurrentPosition();       // Y position
+                double CurrentXPosition = BackRight.getCurrentPosition();         // X position
+
+                if (!HoldPositionSet) {
+                    HoldXPosition = CurrentXPosition;
+                    HoldYPosition = CurrentYPosition;
+                    HoldPositionSet = true;
+                }
+
+                if (CurrentXPosition < HoldXPosition) {
+                    x = -.50 * 1.1;
+                }
+                else if (CurrentXPosition > HoldXPosition) {
+                    x = .50 * 1.1;
+                }
+                else { x = 0; }
+
+                if (CurrentYPosition < HoldYPosition) {
+                    y = -.50;
+                }
+                else if (CurrentYPosition > HoldYPosition) {
+                    y = .50;
+                }
+                else { y = 0; }
+
+            }
+            else { HoldPositionSet = false; }
 
             denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rx), 1);    // calculate motor movement math and adjust according to lift height or manual precision mode selection
 
